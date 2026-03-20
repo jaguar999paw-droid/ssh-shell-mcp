@@ -1,0 +1,59 @@
+# ── ssh-shell-mcp specific ────────────────────────────────────────────────────
+# Live host inventory — contains real credentials, NEVER commit
+config/hosts.yaml
+
+# Runtime logs — contain real operation data
+logs/
+*.log
+*.jsonl
+
+# SSH keys and certs
+*.pem
+*.key
+*.p12
+id_rsa*
+id_ed25519
+id_ed25519.pub
+id_ecdsa*
+known_hosts
+
+# Secrets and env files
+.env
+.env.*
+!.env.example
+.envrc
+secrets/
+credentials/
+
+# Runtime state
+*.sock
+*.pid
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Tests/coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Type checkers
+.mypy_cache/
+.ruff_cache/
+.pytype/

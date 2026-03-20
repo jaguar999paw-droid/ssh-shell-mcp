@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ssh-shell-mcp  |  hosts.example.yaml
+# Copy this file to hosts.yaml and fill in your own values.
+# NEVER commit hosts.yaml — it contains real credentials.
+# Dynamic registration also available via the ssh_register_host tool.
+# ─────────────────────────────────────────────────────────────────────────────
+
+hosts:
+
+  # ── Local machine ────────────────────────────────────────────────────────
+  # Useful for testing and local automation.
+  # Requires SSH server running on localhost (e.g. openssh-server).
+  localhost:
+    host: 127.0.0.1
+    port: 22
+    user: your-username
+    key: ~/.ssh/id_ed25519
+    tags: [local]
+
+  # ── Remote web server ────────────────────────────────────────────────────
+  web01:
+    host: 10.0.0.10
+    port: 22
+    user: deploy
+    key: ~/.ssh/deploy_key
+    tags: [web, production]
+
+  # ── Database server ──────────────────────────────────────────────────────
+  db01:
+    host: 10.0.0.20
+    port: 22
+    user: deploy
+    key: ~/.ssh/deploy_key
+    tags: [database, production]
+
+  # ── Staging environment ──────────────────────────────────────────────────
+  staging:
+    host: 192.168.1.50
+    port: 2222
+    user: deploy
+    key: ~/.ssh/staging_key
+    tags: [staging]
+
+  # ── Jump host / bastion ──────────────────────────────────────────────────
+  # bastion:
+  #   host: bastion.example.com
+  #   port: 22
+  #   user: ops
+  #   key: ~/.ssh/id_ed25519
+  #   tags: [bastion, jump]

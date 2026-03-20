@@ -1,0 +1,66 @@
+# ─────────────────────────────────────────────────────────────────
+# ssh-shell-mcp  |  policies.yaml
+# Security policy configuration.
+# All fields are optional — omitting them uses permissive defaults.
+# ─────────────────────────────────────────────────────────────────
+
+policies:
+
+  # ── Host allowlist ─────────────────────────────────────────────
+  # If set, only hosts matching these patterns are accessible.
+  # Supports fnmatch wildcards (e.g. "web*", "*.internal").
+  # An empty list means ALL registered hosts are permitted.
+  host_allowlist: []
+  # host_allowlist:
+  #   - web01
+  #   - web02
+  #   - db*
+  #   - "*.production"
+
+  # ── Command blocklist ──────────────────────────────────────────
+  # Commands matching these patterns are always rejected.
+  # Supports fnmatch wildcards. Case-insensitive.
+  command_blocklist:
+    - "rm -rf /"
+    - "rm -rf /*"
+    - "mkfs*"
+    - ":(){:|:&};:"       # fork bomb
+    - "dd if=/dev/zero*"
+    - "chmod -R 777 /"
+  # Add your own dangerous patterns:
+  # - "shutdown*"
+  # - "reboot*"
+  # - "passwd*"
+
+  # ── Command allowlist ─────────────────────────────────────────
+  # If set, ONLY commands matching these patterns are permitted.
+  # An empty list means all (non-blocked) commands are allowed.
+  command_allowlist: []
+  # command_allowlist:
+  #   - "docker *"
+  #   - "systemctl *"
+  #   - "journalctl *"
+  #   - "ls *"
+  #   - "cat *"
+  #   - "df *"
+  #   - "free *"
+
+  # ── Rate limiting ──────────────────────────────────────────────
+  # Maximum requests per second per host (sliding window).
+  rate_limit_rps: 20
+
+  # ── Concurrency ────────────────────────────────────────────────
+  # Maximum concurrent SSH operations.
+  max_concurrent: 50
+
+  # ── Connection timeout ─────────────────────────────────────────
+  # Seconds to wait when establishing an SSH connection.
+  connection_timeout: 30
+
+  # ── Sandbox users ─────────────────────────────────────────────
+  # Force specific hosts to use a restricted user for all connections.
+  # This overrides the user set in hosts.yaml.
+  sandbox_users: {}
+  # sandbox_users:
+  #   prod-server: "readonly"
+  #   db01: "monitor"

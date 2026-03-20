@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "ssh-shell-mcp": {
+      "command": "/path/to/ssh-shell-mcp/venv/bin/python",
+      "args": ["/path/to/ssh-shell-mcp/server.py", "--transport", "stdio"],
+      "env": {
+        "SSH_HOSTS_YAML": "/path/to/ssh-shell-mcp/config/hosts.yaml",
+        "SSH_POLICIES_YAML": "/path/to/ssh-shell-mcp/config/policies.yaml",
+        "SSH_MCP_LOG_DIR": "/path/to/ssh-shell-mcp/logs"
+      }
+    }
+  }
+}
