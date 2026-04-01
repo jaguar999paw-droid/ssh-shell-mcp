@@ -1,14 +1,14 @@
 """
 ssh-shell-mcp — Production-grade SSH orchestration layer for AI agents.
-Exposes 40+ MCP tools covering: exec, sessions, files, processes,
+Exposes 57+ MCP tools covering: exec, sessions, files, processes,
 system inspection, multi-host orchestration, tunnels, and security.
 """
-import argparse
 import asyncio
 import json
 import logging
 import os
 import sys
+import time
 
 # Resolve config paths relative to this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -49,12 +49,21 @@ logger = logging.getLogger("ssh_mcp")
 mcp = FastMCP("ssh-shell-mcp")
 
 # ═══════════════════════════════════════════════════════════════════
-# HELPER — security gate applied before every tool execution
+# HELPERS
 # ═══════════════════════════════════════════════════════════════════
 
 def _gate(host: str, command: str = "") -> str | None:
     """Returns error string if blocked, None if allowed."""
     return get_policy().enforce(host, command)
+
+
+def _parse_env(env_json: str) -> dict:
+    """Parse a JSON env string into a dict. Returns empty dict on any error."""
+    try:
+        return json.loads(env_json) if env_json.strip() not in ("", "{}") else {}
+    except Exception:
+        return {}
+
 
 # ═══════════════════════════════════════════════════════════════════
 # 1. CONNECTION / HOST REGISTRY TOOLS
@@ -124,12 +133,8 @@ async def ssh_create_session(host_name: str, env_json: str = "{}") -> str:
     err = _gate(host_name)
     if err:
         return f"BLOCKED: {err}"
-    try:
-        env = json.loads(env_json)
-    except Exception:
-        env = {}
     sm = get_session_manager()
-    sid = await sm.create_session(host_name, env=env)
+    sid = await sm.create_session(host_name, env=_parse_env(env_json))
     audit_log(host_name, "create_session", sid, operation="session")
     return f"Session created: {sid}"
 
@@ -145,8 +150,7 @@ async def ssh_session_exec(session_id: str, command: str, timeout: float = 30.0)
     """
     sm = get_session_manager()
     try:
-        output = await sm.execute_in_session(session_id, command, timeout=timeout)
-        return output
+        return await sm.execute_in_session(session_id, command, timeout=timeout)
     except KeyError as e:
         return f"Error: {e}"
 
@@ -173,8 +177,7 @@ async def ssh_close_session(session_id: str) -> str:
     Args:
         session_id: Session ID to close
     """
-    sm = get_session_manager()
-    return await sm.close_session(session_id)
+    return await get_session_manager().close_session(session_id)
 
 
 @mcp.tool()
@@ -219,10 +222,7 @@ async def ssh_run(host_name: str, command: str, timeout: int = 60,
     err = _gate(host_name, command)
     if err:
         return f"BLOCKED: {err}"
-    try:
-        env = json.loads(env_json)
-    except Exception:
-        env = {}
+    env = _parse_env(env_json)
     result = await ssh_exec(host_name, command, timeout=timeout,
                              env=env or None, cwd=cwd or None)
     return json.dumps(result, indent=2)
@@ -284,10 +284,9 @@ async def ssh_run_with_env(host_name: str, command: str,
     err = _gate(host_name, command)
     if err:
         return f"BLOCKED: {err}"
-    try:
-        env = json.loads(env_json)
-    except Exception as e:
-        return f"Invalid env_json: {e}"
+    env = _parse_env(env_json)
+    if not env:
+        return "Invalid env_json: must be a non-empty JSON object"
     result = await ssh_exec_with_env(host_name, command, env, timeout=timeout)
     return json.dumps(result, indent=2)
 
@@ -812,7 +811,7 @@ def ssh_active_tunnels() -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 9. SECURITY CONTROLS (management tools)
+# 9. SECURITY CONTROLS
 # ═══════════════════════════════════════════════════════════════════
 
 @mcp.tool()
@@ -938,7 +937,7 @@ async def ssh_tmux_send(host_name: str, session_name: str, command: str) -> str:
     if err:
         return f"BLOCKED: {err}"
     escaped = command.replace("'", "'\\''")
-    result = await ssh_exec(
+    await ssh_exec(
         host_name,
         f"tmux send-keys -t {session_name} '{escaped}' Enter",
         timeout=10
@@ -1001,7 +1000,7 @@ async def ssh_exec_retry(host_name: str, command: str,
     err = _gate(host_name, command)
     if err:
         return f"BLOCKED: {err}"
-    last_result = {}
+    last_result: dict = {}
     for attempt in range(1, retries + 1):
         last_result = await ssh_exec(host_name, command, timeout=timeout)
         if last_result.get("exit_code", -1) == 0:
@@ -1024,7 +1023,6 @@ async def ssh_ping_host(host_name: str) -> str:
     err = _gate(host_name)
     if err:
         return f"BLOCKED: {err}"
-    import time
     t0 = time.time()
     try:
         result = await asyncio.wait_for(
@@ -1093,7 +1091,6 @@ if __name__ == "__main__":
     parser.add_argument("--host", default="0.0.0.0", help="HTTP bind address")
     args = parser.parse_args()
 
-    tool_count = len([k for k in dir(mcp) if not k.startswith("_")])
     logger.info(f"ssh-shell-mcp starting | transport={args.transport}")
 
     if args.transport == "streamable_http":
