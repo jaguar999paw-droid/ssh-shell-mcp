@@ -1,88 +1,127 @@
 # ssh-shell-mcp
 
-> A Python [MCP](https://modelcontextprotocol.io/) server providing **57+ SSH tools** for remote shell operations, fleet orchestration, tunneling, and file management — built on [AsyncSSH](https://asyncssh.readthedocs.io/) and [FastMCP](https://github.com/jlowin/fastmcp).
+> **AI-native SSH orchestration for security engineers, DevSecOps, and sysadmins.**  
+> 57+ MCP tools. Async. Audited. Built on [AsyncSSH](https://asyncssh.readthedocs.io/) + [FastMCP](https://github.com/jlowin/fastmcp).
 
+[![CI](https://github.com/jaguar999paw-droid/ssh-shell-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/jaguar999paw-droid/ssh-shell-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-brightgreen)](https://modelcontextprotocol.io/)
 
 ---
 
-## Overview
+## What it does
 
-`ssh-shell-mcp` turns any SSH-accessible host into a fully agentic target. It exposes a structured set of MCP tools that an AI agent (e.g. Claude Desktop) can call to execute commands, manage files, forward ports, orchestrate fleets, and more — all over SSH without exposing credentials in prompts.
+`ssh-shell-mcp` turns any SSH-accessible host into a fully agentic target. Connect Claude (or any MCP-compatible AI agent) to your infrastructure, then let the agent execute commands, triage incidents, orchestrate fleets, manage tunnels, and audit operations — all over SSH, with no credentials in prompts and a full audit trail.
 
----
-
-## Features
-
-| Category | Examples |
-|---|---|
-| **Shell execution** | Run commands, interactive shells, sudo operations |
-| **File management** | Upload, download, read, write, stat, chmod, chown |
-| **Fleet orchestration** | Run commands across multiple hosts in parallel |
-| **Port forwarding & tunnels** | Local/remote/dynamic SOCKS tunnels |
-| **Process management** | List, kill, monitor processes |
-| **System info** | CPU, memory, disk, uptime, OS details |
-| **User management** | Add/remove users, manage SSH authorized keys |
-| **Service control** | systemctl start/stop/status/enable/disable |
-| **Network diagnostics** | ping, netstat, route, DNS lookups |
-| **Log inspection** | Tail logs, journalctl, syslog queries |
-| **Package management** | apt/yum/dnf install, update, remove |
-| **Cron management** | List, add, remove cron jobs |
-| **Docker integration** | Container list, exec, logs, start/stop |
-| **Extras (13 tools)** | Gap-audit additions: SCP batch, host health checks, etc. |
+```
+┌─────────────┐       MCP (stdio/HTTP)      ┌──────────────────┐
+│  Claude /   │ ◄──────────────────────────► │  ssh-shell-mcp   │
+│  AI Agent   │                              │  (this server)   │
+└─────────────┘                              └────────┬─────────┘
+                                                      │  AsyncSSH
+                                          ┌───────────┼───────────┐
+                                       web01       db01       jump01
+```
 
 ---
 
-## Requirements
+## Why ssh-shell-mcp?
 
-- Python 3.10+
-- [`asyncssh`](https://pypi.org/project/asyncssh/) >= 2.14
-- [`fastmcp`](https://pypi.org/project/fastmcp/) >= 0.1
-- An MCP-compatible client (e.g. [Claude Desktop](https://claude.ai/download))
-- SSH access to your target hosts (key-based auth recommended)
+| Feature | ssh-shell-mcp | Ansible | Fabric | Paramiko |
+|---|:---:|:---:|:---:|:---:|
+| AI agent / MCP native | ✅ | ❌ | ❌ | ❌ |
+| Async connection pool | ✅ | ❌ | ❌ | ❌ |
+| Built-in audit log | ✅ | partial | ❌ | ❌ |
+| Security policy gate | ✅ | ❌ | ❌ | ❌ |
+| Persistent shell sessions | ✅ | ❌ | ❌ | ❌ |
+| Live SOCKS5 / tunnel mgmt | ✅ | ❌ | ❌ | ❌ |
+| Zero-dependency config | ✅ | ❌ | ❌ | ✅ |
+| Fleet health checks | ✅ | ✅ | ❌ | ❌ |
 
 ---
 
-## Installation
+## Use Cases
+
+### 🔵 Blue Team / Incident Response
+- Ask Claude to `ssh_journalctl` across all production hosts for a suspicious PID, then `ssh_kill` it
+- Run `ssh_health_check_fleet` to instantly see which hosts went dark after an incident
+- Use `ssh_operation_history` + `ssh_audit_stats` to reconstruct what an agent did during triage
+- `ssh_playbook_on_group` to push a hardened `sshd_config` to the entire `linux` host group
+
+### 🔴 Red Team / Authorized Testing (own systems only)
+- `ssh_socks_proxy` through a jump host for proxychains-style traffic routing
+- `ssh_port_forward` to expose internal services for enumeration during authorized assessments
+- `ssh_reverse_tunnel` to create C2-style callbacks on lab environments
+- `ssh_tmux_send` to drive interactive sessions from an AI agent
+
+### ⚙️ DevSecOps / Fleet Automation
+- Rolling deployments with `ssh_rolling` — zero-downtime, stop-on-failure
+- Push secrets via `ssh_run_with_env` — never in command strings
+- `ssh_sync` config directories, then `ssh_playbook` to restart affected services
+- Group hosts by `tags` (e.g. `web`, `database`, `staging`) and broadcast commands to each tier
+
+---
+
+## Quickstart
 
 ```bash
 git clone https://github.com/jaguar999paw-droid/ssh-shell-mcp.git
 cd ssh-shell-mcp
 
-python3 -m venv .venv
-source .venv/bin/activate
-
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+
+cp config.example.json config.json   # fill in your hosts
+python server.py --transport stdio
 ```
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ssh-shell": {
+      "command": "/path/to/ssh-shell-mcp/.venv/bin/python",
+      "args": ["server.py", "--transport", "stdio"],
+      "env": {
+        "SSH_HOSTS_YAML": "/path/to/ssh-shell-mcp/config/hosts.yaml"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Tool Categories (57 tools)
+
+| # | Category | Tools |
+|---|---|---|
+| 1 | **Shell execution** | `ssh_run`, `ssh_run_batch`, `ssh_run_script`, `ssh_run_with_env`, `ssh_exec_retry` |
+| 2 | **Persistent sessions** | `ssh_create_session`, `ssh_session_exec`, `ssh_session_read_buffer`, `ssh_close_session`, `ssh_session_list`, `ssh_session_set_env` |
+| 3 | **File management** | `ssh_upload`, `ssh_download`, `ssh_ls`, `ssh_cat`, `ssh_write`, `ssh_rm`, `ssh_sync` |
+| 4 | **Process management** | `ssh_ps`, `ssh_kill`, `ssh_start`, `ssh_background`, `ssh_monitor` |
+| 5 | **System inspection** | `ssh_info`, `ssh_df`, `ssh_free`, `ssh_netstat`, `ssh_service`, `ssh_journalctl`, `ssh_docker` |
+| 6 | **Fleet orchestration** | `ssh_parallel`, `ssh_rolling`, `ssh_group_exec`, `ssh_broadcast_batch`, `ssh_playbook`, `ssh_playbook_on_group` |
+| 7 | **Tunnels & proxies** | `ssh_port_forward`, `ssh_reverse_tunnel`, `ssh_socks_proxy`, `ssh_close_tunnel`, `ssh_active_tunnels` |
+| 8 | **Security controls** | `ssh_check_command`, `ssh_check_host_access`, `ssh_security_status` |
+| 9 | **Host registry** | `ssh_register_host`, `ssh_list_hosts`, `ssh_remove_host`, `ssh_connection_status` |
+| 10 | **Health & observability** | `ssh_ping_host`, `ssh_health_check_fleet`, `ssh_full_status`, `ssh_operation_history`, `ssh_audit_stats` |
+| 11 | **tmux** | `ssh_tmux_new`, `ssh_tmux_send`, `ssh_tmux_list`, `ssh_tmux_kill` |
 
 ---
 
 ## Configuration
 
-Copy the example config and fill in your values:
-
-```bash
-cp config.example.json config.json
-```
-
-**`config.json` structure:**
-
 ```json
 {
   "hosts": {
-    "my-server": {
+    "web01": {
       "hostname": "192.168.1.100",
       "port": 22,
-      "username": "your-user",
-      "key_path": "~/.ssh/id_ed25519"
-    },
-    "prod-web": {
-      "hostname": "10.0.0.5",
-      "port": 22,
       "username": "deploy",
-      "key_path": "~/.ssh/deploy_key"
+      "key_path": "~/.ssh/id_ed25519"
     }
   },
   "default_timeout": 30,
@@ -90,29 +129,39 @@ cp config.example.json config.json
 }
 ```
 
-> **Never commit `config.json`** — it is already in `.gitignore`.
+> **Never commit `config.json`** — it is in `.gitignore`.
+
+### Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `SSH_MCP_CONFIG` | Path to `config.json` | `./config.json` |
+| `SSH_MCP_LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` | `INFO` |
+| `SSH_MCP_TIMEOUT` | Global timeout (seconds) | `30` |
+| `MCP_AUTH_TOKEN` | Bearer token for HTTP transport | _(none)_ |
 
 ---
 
-## Claude Desktop Integration
+## Security Design
 
-Add to your `claude_desktop_config.json`:
+- **Key-based auth only** — password auth is intentionally unsupported.
+- **Policy gate on every tool** — `_gate()` checks host allowlist and command blocklist before any execution.
+- **Full audit log** — every operation is recorded with host, command, result, and timestamp.
+- **No outbound telemetry** — the server connects only to your configured SSH targets.
+- **stdio default** — no network port opened on the MCP host by default.
+- Running targets behind a VPN (e.g. Tailscale) is strongly recommended.
 
-```json
-{
-  "mcpServers": {
-    "ssh-shell": {
-      "command": "/path/to/ssh-shell-mcp/.venv/bin/python",
-      "args": ["-m", "ssh_shell_mcp.server"],
-      "env": {
-        "SSH_MCP_CONFIG": "/path/to/ssh-shell-mcp/config.json"
-      }
-    }
-  }
-}
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
+---
+
+## HTTP Transport (remote agents)
+
+```bash
+MCP_AUTH_TOKEN=your-secret python server.py --transport streamable_http --port 8000
 ```
 
-Replace `/path/to/ssh-shell-mcp` with your actual clone path.
+The server exposes `/mcp` with Bearer token authentication. Suitable for remote AI agents over a private network.
 
 ---
 
@@ -120,47 +169,24 @@ Replace `/path/to/ssh-shell-mcp` with your actual clone path.
 
 ```
 ssh-shell-mcp/
-├── ssh_shell_mcp/
-│   ├── __init__.py
-│   ├── server.py              # FastMCP server entrypoint
-│   ├── core.py                # AsyncSSH connection pool
-│   ├── tools/
-│   │   ├── shell.py           # Command execution tools
-│   │   ├── files.py           # File management tools
-│   │   ├── fleet.py           # Multi-host orchestration
-│   │   ├── tunnels.py         # Port forwarding / SOCKS
-│   │   ├── system.py          # System info & process tools
-│   │   ├── services.py        # systemctl tools
-│   │   ├── network.py         # Network diagnostics
-│   │   ├── docker_tools.py    # Docker integration
-│   │   └── ...
-│   └── ssh_shell_mcp_extras.py  # 13 gap-audit tools
+├── server.py              # MCP entrypoint — all 57 tools
+├── server/
+│   ├── connection_manager.py   # AsyncSSH connection pool
+│   ├── session_manager.py      # Persistent shell sessions
+│   ├── shell_engine.py         # Core command execution
+│   ├── file_ops.py             # SFTP file operations
+│   ├── process_manager.py      # Process lifecycle
+│   ├── system_inspector.py     # System info, logs, Docker
+│   ├── network_tools.py        # Tunnel manager
+│   ├── orchestrator.py         # Multi-host execution
+│   ├── audit.py                # Audit log
+│   └── security.py             # Policy enforcement
 ├── config.example.json
 ├── requirements.txt
-├── .gitignore
-├── SECURITY.md
-├── LICENSE
-└── README.md
+├── Dockerfile
+├── docker-compose.yml
+└── SECURITY.md
 ```
-
----
-
-## Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `SSH_MCP_CONFIG` | Path to `config.json` | `./config.json` |
-| `SSH_MCP_LOG_LEVEL` | Logging level (`DEBUG`, `INFO`, `WARNING`) | `INFO` |
-| `SSH_MCP_TIMEOUT` | Global SSH operation timeout (seconds) | `30` |
-
----
-
-## Security
-
-- **Key-based auth only** — password auth is intentionally unsupported to discourage weak credential use.
-- **Config file isolation** — host credentials live in `config.json`, never in code.
-- **No telemetry** — this server makes no outbound connections except to your configured SSH hosts.
-- See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 ---
 
@@ -172,10 +198,10 @@ This tool provides programmatic SSH access to remote systems. **Use only on syst
 
 ## 🔐 Cryptography Notice
 
-This software implements the SSH protocol, which uses cryptographic algorithms. Export, import, and use of cryptographic software may be restricted in some jurisdictions. Users are responsible for compliance with applicable laws. See the [Wassenaar Arrangement](https://www.wassenaar.org/) for reference.
+This software uses the SSH protocol, which relies on cryptographic algorithms. Export, import, and use may be restricted in some jurisdictions. See the [Wassenaar Arrangement](https://www.wassenaar.org/) for reference.
 
 ---
 
 ## License
 
-[Apache License 2.0](LICENSE) — see the LICENSE file for full terms.
+[Apache License 2.0](LICENSE)
