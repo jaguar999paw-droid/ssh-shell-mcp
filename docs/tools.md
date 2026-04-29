@@ -1,184 +1,143 @@
 # Tool Reference
 
-Complete index of all MCP tools exposed by `ssh-shell-mcp`.
+Complete index of all 57 MCP tools exposed by `ssh-shell-mcp`, grouped by category.
 
-All tools accept a `host` parameter that maps to a key in your `config.json`.
+All tools that target a remote host accept a `host_name` parameter matching a key in `config/hosts.yaml`.
 
 ---
 
-## Shell Execution
+## 1. Shell Execution
 
 | Tool | Description |
 |---|---|
-| `run_command` | Execute a shell command and return stdout/stderr |
-| `run_command_sudo` | Execute a command with sudo privileges |
-| `run_script` | Upload and execute a local shell script remotely |
-| `run_interactive` | Open an interactive PTY session |
-| `run_pipeline` | Execute a multi-command pipeline |
-| `run_as_user` | Run a command as a specific user (su/sudo -u) |
-| `get_exit_code` | Return the exit code of the last command |
+| `ssh_run` | Execute a single command on a remote host; returns stdout/stderr/exit code |
+| `ssh_run_batch` | Run a sequence of commands sequentially (stop-on-error supported) |
+| `ssh_run_script` | Upload and execute a local script on a remote host |
+| `ssh_run_with_env` | Execute a command with explicitly injected environment variables |
+| `ssh_exec_retry` | Execute a command with automatic retry on failure |
 
 ---
 
-## File Management
+## 2. Persistent Shell Sessions
 
 | Tool | Description |
 |---|---|
-| `read_file` | Read the contents of a remote file |
-| `write_file` | Write content to a remote file |
-| `append_file` | Append content to a remote file |
-| `upload_file` | Upload a local file to a remote path |
-| `download_file` | Download a remote file to a local path |
-| `delete_file` | Delete a remote file or directory |
-| `copy_file` | Copy a file within the remote host |
-| `move_file` | Move/rename a file on the remote host |
-| `stat_file` | Get metadata (size, mtime, permissions) of a file |
-| `chmod` | Change file permissions |
-| `chown` | Change file ownership |
-| `mkdir` | Create a directory (with -p support) |
-| `list_directory` | List directory contents |
-| `find_files` | Find files matching a pattern |
-| `disk_usage` | Show disk usage for a path |
+| `ssh_create_session` | Open a persistent interactive shell session on a remote host |
+| `ssh_session_exec` | Execute a command inside an existing session (state/CWD preserved) |
+| `ssh_session_read_buffer` | Read recent output from a session's output buffer |
+| `ssh_session_set_env` | Inject an environment variable into a running session |
+| `ssh_session_list` | List all currently active persistent sessions |
+| `ssh_close_session` | Close and destroy a persistent session |
 
 ---
 
-## Fleet Orchestration
+## 3. File Management
 
 | Tool | Description |
 |---|---|
-| `fleet_run` | Run a command on multiple hosts in parallel |
-| `fleet_upload` | Upload a file to multiple hosts |
-| `fleet_status` | Check connectivity and uptime across all hosts |
-| `fleet_diff` | Compare a file across multiple hosts |
+| `ssh_upload` | Upload a local file to a remote host via SFTP |
+| `ssh_download` | Download a file from a remote host to local disk |
+| `ssh_ls` | List directory contents on a remote host |
+| `ssh_cat` | Read a remote file's contents |
+| `ssh_write` | Write content to a remote file (overwrites existing) |
+| `ssh_rm` | Delete a file on a remote host |
+| `ssh_sync` | Recursively sync a local directory to a remote host |
 
 ---
 
-## Port Forwarding & Tunnels
+## 4. Process Management
 
 | Tool | Description |
 |---|---|
-| `forward_local_port` | Open a local port forwarding tunnel |
-| `forward_remote_port` | Open a remote port forwarding tunnel |
-| `socks_proxy` | Start a SOCKS5 dynamic tunnel |
-| `list_tunnels` | List active tunnels |
-| `close_tunnel` | Close a specific tunnel by ID |
+| `ssh_ps` | List running processes on a remote host |
+| `ssh_kill` | Send a signal to a remote process by PID |
+| `ssh_start` | Start a process on a remote host (foreground or background) |
+| `ssh_background` | Start a named background process with PID tracking and log file |
+| `ssh_monitor` | Monitor resource usage of a remote process by PID |
 
 ---
 
-## Process Management
+## 5. System Inspection
 
 | Tool | Description |
 |---|---|
-| `list_processes` | List running processes (ps aux) |
-| `kill_process` | Kill a process by PID or name |
-| `get_process_info` | Get detailed info about a specific PID |
-| `wait_for_process` | Wait until a process exits |
+| `ssh_info` | Get comprehensive system info: OS, CPU, memory, uptime, kernel |
+| `ssh_df` | Show disk usage on a remote host |
+| `ssh_free` | Show memory and swap usage |
+| `ssh_netstat` | Show network interfaces, open ports, and routing table |
+| `ssh_service` | Check systemd service status |
+| `ssh_journalctl` | Retrieve systemd journal logs (filterable by unit, PID, time) |
+| `ssh_docker` | List Docker containers and images on a remote host |
 
 ---
 
-## System Information
+## 6. Fleet Orchestration
 
 | Tool | Description |
 |---|---|
-| `get_uptime` | Get system uptime |
-| `get_cpu_info` | CPU model, cores, usage |
-| `get_memory_info` | RAM usage and availability |
-| `get_disk_info` | Mounted filesystems and usage |
-| `get_os_info` | OS name, kernel version, architecture |
-| `get_hostname` | Retrieve the remote system's hostname |
-| `get_env_vars` | List environment variables on the remote host |
+| `ssh_parallel` | Execute a command simultaneously on multiple hosts |
+| `ssh_rolling` | Execute a command sequentially across hosts with inter-host delay |
+| `ssh_group_exec` | Execute a command on all hosts sharing a group tag |
+| `ssh_broadcast_batch` | Broadcast a sequence of commands to multiple hosts in parallel |
+| `ssh_playbook` | Execute an infrastructure playbook (YAML) on a single host |
+| `ssh_playbook_on_group` | Execute a playbook across all hosts in a group |
 
 ---
 
-## Service Control (systemctl)
+## 7. Tunnels & Proxies
 
 | Tool | Description |
 |---|---|
-| `service_start` | Start a systemd service |
-| `service_stop` | Stop a systemd service |
-| `service_restart` | Restart a systemd service |
-| `service_status` | Get the status of a systemd service |
-| `service_enable` | Enable a service at boot |
-| `service_disable` | Disable a service at boot |
-| `list_services` | List all systemd units |
+| `ssh_port_forward` | Create a local port forward: `localhost:local_port → remote_host:remote_port` |
+| `ssh_reverse_tunnel` | Create a reverse tunnel: `host_name:remote_port → local_host:local_port` |
+| `ssh_socks_proxy` | Open a SOCKS5 dynamic proxy through a remote host |
+| `ssh_close_tunnel` | Close an active SSH tunnel by ID |
+| `ssh_active_tunnels` | List all currently active SSH tunnels |
 
 ---
 
-## Network Diagnostics
+## 8. Security Controls
 
 | Tool | Description |
 |---|---|
-| `ping_host` | Ping a host from the remote machine |
-| `traceroute` | Traceroute to a target from the remote machine |
-| `netstat` | List open ports and connections |
-| `dns_lookup` | Perform a DNS lookup from the remote host |
-| `get_interfaces` | List network interfaces and IPs |
+| `ssh_check_command` | Dry-run a command through the security policy without executing it |
+| `ssh_check_host_access` | Check whether a host is accessible under the current policy |
+| `ssh_security_status` | Show the current security policy (allowlists, blocklists, rate limits) |
 
 ---
 
-## Log Inspection
+## 9. Host Registry
 
 | Tool | Description |
 |---|---|
-| `tail_log` | Tail the end of a log file |
-| `journalctl` | Query systemd journal logs |
-| `grep_log` | Search a log file for a pattern |
+| `ssh_register_host` | Register a new SSH host in the runtime registry |
+| `ssh_list_hosts` | List all registered hosts with their connection details |
+| `ssh_remove_host` | Remove a host from the registry |
+| `ssh_connection_status` | Show the current state of all pooled SSH connections |
 
 ---
 
-## Package Management
+## 10. Health & Observability
 
 | Tool | Description |
 |---|---|
-| `apt_install` | Install a package via apt |
-| `apt_remove` | Remove a package via apt |
-| `apt_update` | Update package lists |
-| `yum_install` | Install a package via yum/dnf |
+| `ssh_ping_host` | Test SSH connectivity to a registered host |
+| `ssh_health_check_fleet` | Ping all hosts (or a subset) in parallel and report status |
+| `ssh_full_status` | Return a complete observability snapshot: connections, sessions, tunnels |
+| `ssh_operation_history` | Show recent SSH operation history from the audit log |
+| `ssh_audit_stats` | Return aggregate statistics from the audit log |
 
 ---
 
-## User Management
+## 11. tmux
 
 | Tool | Description |
 |---|---|
-| `list_users` | List system users |
-| `add_user` | Create a new system user |
-| `remove_user` | Remove a system user |
-| `add_authorized_key` | Add an SSH public key to a user's authorized_keys |
-| `remove_authorized_key` | Remove an SSH public key |
+| `ssh_tmux_new` | Create a new tmux session on a remote host |
+| `ssh_tmux_send` | Send a command to a named tmux session |
+| `ssh_tmux_list` | List all tmux sessions on a remote host |
+| `ssh_tmux_kill` | Kill a tmux session on a remote host |
 
 ---
 
-## Docker Integration
-
-| Tool | Description |
-|---|---|
-| `docker_ps` | List running containers |
-| `docker_exec` | Execute a command in a container |
-| `docker_logs` | Fetch container logs |
-| `docker_start` | Start a stopped container |
-| `docker_stop` | Stop a running container |
-
----
-
-## Extras (Gap Audit — ssh_shell_mcp_extras.py)
-
-| Tool | Description |
-|---|---|
-| `scp_batch` | Transfer multiple files in a single SCP operation |
-| `host_health_check` | Composite health check (CPU, memory, disk, services) |
-| `diff_files` | Diff two remote files |
-| `checksum_file` | Compute MD5/SHA256 of a remote file |
-| `compress_directory` | tar.gz a remote directory |
-| `extract_archive` | Extract a remote archive |
-| `sync_directories` | rsync two remote directories |
-| `watch_file` | Watch a file for changes |
-| `run_tmux_session` | Run a command in a persistent tmux session |
-| `list_tmux_sessions` | List active tmux sessions |
-| `attach_tmux_session` | Send input to a tmux session |
-| `set_cron_job` | Add or update a cron job |
-| `remove_cron_job` | Remove a cron job by pattern |
-
----
-
-*Total: 57+ tools across 14 categories.*
+*Total: 57 tools across 11 categories.*

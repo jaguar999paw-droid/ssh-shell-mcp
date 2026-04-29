@@ -114,30 +114,46 @@ Add to `claude_desktop_config.json`:
 
 ## Configuration
 
-```json
-{
-  "hosts": {
-    "web01": {
-      "hostname": "192.168.1.100",
-      "port": 22,
-      "username": "deploy",
-      "key_path": "~/.ssh/id_ed25519"
-    }
-  },
-  "default_timeout": 30,
-  "max_parallel_hosts": 10
-}
+**`config/hosts.yaml`** — registers your SSH targets:
+
+```yaml
+hosts:
+  web01:
+    host: 192.168.1.100
+    port: 22
+    user: deploy
+    key: ~/.ssh/id_ed25519
+    tags: [web, production]
+
+  db01:
+    host: 192.168.1.200
+    port: 22
+    user: deploy
+    key: ~/.ssh/id_ed25519
+    tags: [database, production]
 ```
 
-> **Never commit `config.json`** — it is in `.gitignore`.
+**`config/policies.yaml`** — security policy (host allowlist + command blocklist):
+
+```yaml
+policies:
+  host_allowlist: []         # empty = all registered hosts permitted
+  command_blocklist:
+    - "rm -rf /"
+    - "rm -rf /*"
+    - "mkfs*"
+    - ":(){:|:&};:"          # fork bomb
+```
+
+> **Never commit `hosts.yaml`** — it contains real credentials. It is already in `.gitignore`. Use `hosts.example.yaml` as a template.
 
 ### Environment Variables
 
 | Variable | Description | Default |
 |---|---|---|
-| `SSH_MCP_CONFIG` | Path to `config.json` | `./config.json` |
-| `SSH_MCP_LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` | `INFO` |
-| `SSH_MCP_TIMEOUT` | Global timeout (seconds) | `30` |
+| `SSH_HOSTS_YAML` | Path to hosts config | `config/hosts.yaml` |
+| `SSH_POLICIES_YAML` | Path to security policy config | `config/policies.yaml` |
+| `SSH_MCP_LOG_DIR` | Directory for audit logs | `logs/` |
 | `MCP_AUTH_TOKEN` | Bearer token for HTTP transport | _(none)_ |
 
 ---
@@ -152,6 +168,18 @@ Add to `claude_desktop_config.json`:
 - Running targets behind a VPN (e.g. Tailscale) is strongly recommended.
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
+---
+
+## Running Tests
+
+```bash
+# Integration tests — requires SSH server on localhost
+TEST_USER=$USER TEST_KEY_PATH=~/.ssh/id_ed25519 pytest tests/ -v
+```
+
+Tests cover: exec, file transfer, persistent sessions, fleet orchestration, and tunnels.  
+They use **real SSH connections** — no mocking.
 
 ---
 
@@ -187,6 +215,10 @@ ssh-shell-mcp/
 ├── docker-compose.yml
 └── SECURITY.md
 ```
+
+---
+
+For per-tool parameter documentation see [`docs/tools.md`](docs/tools.md).
 
 ---
 
