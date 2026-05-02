@@ -94,6 +94,228 @@ Add to `claude_desktop_config.json`:
 
 ---
 
+## 🚀 Non-Docker Setup (Complete Guide)
+
+For users who prefer **native installation** without Docker, follow these step-by-step instructions.
+
+### Prerequisites
+
+Before starting, ensure you have:
+
+- **Python 3.10 or higher** — Check: `python3 --version`
+- **pip** (Python package manager) — Check: `pip3 --version`
+- **SSH client** — Usually pre-installed on macOS/Linux; on Windows, install [Git Bash](https://gitforwindows.org/) or [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install)
+- **SSH keys** — Have an SSH public key in `~/.ssh/id_ed25519` (or `id_rsa`). [Generate one](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) if needed.
+- **SSH-accessible hosts** — At least one remote server you can connect to via SSH
+
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/jaguar999paw-droid/ssh-shell-mcp.git
+cd ssh-shell-mcp
+```
+
+### Step 2: Create a Virtual Environment
+
+Isolate dependencies in a virtual environment:
+
+```bash
+python3 -m venv .venv
+```
+
+Activate it:
+
+**On macOS/Linux:**
+```bash
+source .venv/bin/activate
+```
+
+**On Windows (Git Bash):**
+```bash
+source .venv/Scripts/activate
+```
+
+**On Windows (PowerShell):**
+```bash
+.\.venv\Scripts\Activate.ps1
+```
+
+You should see `(.venv)` appear in your shell prompt.
+
+### Step 3: Install Dependencies
+
+```bash
+pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
+```
+
+This installs:
+- `asyncssh` — Async SSH library
+- `mcp` & `fastmcp` — Model Context Protocol framework
+- `pyyaml` — Configuration file parsing
+- `pytest` — Testing framework
+
+### Step 4: Configure Your SSH Hosts
+
+Create a configuration file defining which SSH targets to connect to:
+
+```bash
+cp config.example.json config.json
+```
+
+Edit `config.json` with your SSH hosts:
+
+```json
+{
+  "hosts": {
+    "web01": {
+      "host": "192.168.1.100",
+      "port": 22,
+      "user": "deploy",
+      "key_path": "~/.ssh/id_ed25519",
+      "tags": ["web", "production"]
+    },
+    "db01": {
+      "host": "192.168.1.200",
+      "port": 22,
+      "user": "deploy",
+      "key_path": "~/.ssh/id_ed25519",
+      "tags": ["database", "production"]
+    },
+    "localhost": {
+      "host": "127.0.0.1",
+      "port": 22,
+      "user": "$(whoami)",
+      "key_path": "~/.ssh/id_ed25519",
+      "tags": ["local", "testing"]
+    }
+  }
+}
+```
+
+**Key fields:**
+- `host` — IP address or domain of the SSH server
+- `port` — SSH port (default: 22)
+- `user` — SSH username
+- `key_path` — Path to your SSH private key (e.g. `~/.ssh/id_ed25519`)
+- `tags` — Arbitrary labels for grouping hosts (e.g. web, database, production)
+
+### Step 5: Test SSH Connectivity
+
+Before connecting via MCP, verify SSH works:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 deploy@192.168.1.100 'echo "✓ SSH works!"'
+```
+
+If you get `Permission denied`, check:
+- SSH key file permissions: `chmod 600 ~/.ssh/id_ed25519`
+- SSH server is running on the target host
+- User credentials are correct in `config.json`
+- Firewall isn't blocking port 22
+
+### Step 6: Start the Server
+
+Run the server in **stdio mode** (for Claude Desktop):
+
+```bash
+python server.py --transport stdio
+```
+
+You should see:
+```
+[ssh-shell-mcp] INFO Starting MCP server in stdio mode
+[ssh-shell-mcp] INFO Loaded config from config.json
+[ssh-shell-mcp] INFO Registered 3 hosts: web01, db01, localhost
+```
+
+The server is now ready to accept MCP connections. Leave this terminal open.
+
+### Step 7: Connect to Claude Desktop
+
+In a **new terminal**, find the full path to your Python executable:
+
+```bash
+which python  # or 'python' depending on your setup
+# Output: /Users/you/projects/ssh-shell-mcp/.venv/bin/python
+```
+
+Copy the path (e.g., `/Users/you/projects/ssh-shell-mcp/.venv/bin/python`).
+
+Edit your Claude Desktop configuration file:
+
+**On macOS:**
+```bash
+nano ~/Library/Application\ Support/Claude/claude_desktop_config.json
+```
+
+**On Linux:**
+```bash
+nano ~/.config/Claude/claude_desktop_config.json
+```
+
+**On Windows:**
+```bash
+notepad %APPDATA%\Claude\claude_desktop_config.json
+```
+
+Add or update the `mcpServers` section:
+
+```json
+{
+  "mcpServers": {
+    "ssh-shell": {
+      "command": "/Users/you/projects/ssh-shell-mcp/.venv/bin/python",
+      "args": ["server.py", "--transport", "stdio"],
+      "env": {
+        "SSH_HOSTS_YAML": "/Users/you/projects/ssh-shell-mcp/config/hosts.yaml"
+      }
+    }
+  }
+}
+```
+
+**Replace `/Users/you/projects/ssh-shell-mcp/` with your actual repository path.**
+
+### Step 8: Restart Claude Desktop
+
+Fully restart Claude Desktop for the new MCP server to load:
+
+1. Quit Claude completely
+2. Wait 2 seconds
+3. Reopen Claude
+
+You should see a **hammer icon** (🔨) or **settings gear** in the Claude interface — click it to verify the server loaded.
+
+### Step 9: Test a Tool
+
+In Claude, try:
+
+```
+Can you list the files in /tmp on web01?
+```
+
+Claude will use the `ssh_ls` tool to run `ls /tmp` on `web01` via SSH. Watch the terminal running `server.py` to see the command executed with full audit logging.
+
+### Troubleshooting
+
+| Issue | Solution |
+|---|---|
+| `ModuleNotFoundError: No module named 'asyncssh'` | Ensure venv is activated: `source .venv/bin/activate` |
+| `Permission denied (publickey)` | Check SSH key permissions: `chmod 600 ~/.ssh/id_ed25519` |
+| `Could not open config file 'config.json'` | Verify `config.json` exists in the repo root: `ls config.json` |
+| MCP server not showing in Claude | Restart Claude Desktop completely (not just app minimize) |
+| `Connection refused` when testing SSH | Verify SSH server is running on target: `ssh web01 'echo ok'` |
+| `Host key verification failed` | SSH host unknown. Accept the key: `ssh-keyscan -H 192.168.1.100 >> ~/.ssh/known_hosts` |
+
+### Next Steps
+
+- **Read the [tool reference](docs/tools.md)** for all 57 available tools
+- **Review [SECURITY.md](SECURITY.md)** for production hardening
+- **Check [CONTRIBUTING.md](CONTRIBUTING.md)** if you want to extend the server
+
+---
+
 ## Tool Categories (57 tools)
 
 | # | Category | Tools |
