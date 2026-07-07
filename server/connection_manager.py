@@ -56,29 +56,38 @@ class ConnectionManager:
         self._locks: dict[str, asyncio.Lock] = {}
         self._pool_size = pool_size
         self._hosts_yaml = hosts_yaml
-        self._load_registry()
+        self._registry_loaded = False
+        # Defer YAML loading to avoid blocking on module import
 
     def _load_registry(self):
-        """Load host definitions from YAML file."""
+        """Load host definitions from YAML file. Called lazily on first use."""
+        if self._registry_loaded:
+            return
         p = Path(self._hosts_yaml)
         if not p.exists():
             logger.warning(f"hosts.yaml not found at {p}, starting empty registry")
+            self._registry_loaded = True
             return
-        with open(p) as f:
-            data = yaml.safe_load(f) or {}
-        hosts = data.get("hosts", {})
-        for name, cfg in hosts.items():
-            self._registry[name] = HostConfig(
-                name=name,
-                host=cfg["host"],
-                port=int(cfg.get("port", 22)),
-                user=cfg.get("user", "root"),
-                key=self._resolve_path(cfg.get("key")),
-                password=cfg.get("password"),
-                connect_timeout=int(cfg.get("connect_timeout", 30)),
-                tags=cfg.get("tags", []),
-            )
-        logger.info(f"Loaded {len(self._registry)} hosts from registry")
+        try:
+            with open(p) as f:
+                data = yaml.safe_load(f) or {}
+            hosts = data.get("hosts", {})
+            for name, cfg in hosts.items():
+                self._registry[name] = HostConfig(
+                    name=name,
+                    host=cfg["host"],
+                    port=int(cfg.get("port", 22)),
+                    user=cfg.get("user", "root"),
+                    key=self._resolve_path(cfg.get("key")),
+                    password=cfg.get("password"),
+                    connect_timeout=int(cfg.get("connect_timeout", 30)),
+                    tags=cfg.get("tags", []),
+                )
+            logger.info(f"Loaded {len(self._registry)} hosts from registry")
+        except Exception as e:
+            logger.error(f"Failed to load registry: {e}")
+        finally:
+            self._registry_loaded = True
 
     def _resolve_path(self, path: Optional[str]) -> Optional[str]:
         if not path:
@@ -89,6 +98,7 @@ class ConnectionManager:
                       port: int = 22, key: Optional[str] = None,
                       password: Optional[str] = None, tags: list = None) -> str:
         """Dynamically register a new host into the registry."""
+        self._load_registry()
         self._registry[name] = HostConfig(
             name=name, host=host, port=port, user=user,
             key=self._resolve_path(key), password=password,
@@ -98,6 +108,7 @@ class ConnectionManager:
         return f"Host '{name}' registered: {user}@{host}:{port}"
 
     def list_hosts(self) -> list[dict]:
+        self._load_registry()
         return [
             {"name": h.name, "host": h.host, "port": h.port,
              "user": h.user, "tags": h.tags}
@@ -105,6 +116,7 @@ class ConnectionManager:
         ]
 
     def remove_host(self, name: str) -> str:
+        self._load_registry()
         if name in self._registry:
             del self._registry[name]
             return f"Host '{name}' removed from registry"
@@ -139,6 +151,7 @@ class ConnectionManager:
 
     async def get_connection(self, host_name: str) -> asyncssh.SSHClientConnection:
         """Get or create a pooled connection to a host."""
+        self._load_registry()
         if host_name not in self._registry:
             raise ValueError(f"Unknown host: '{host_name}'. Register it first.")
         cfg = self._registry[host_name]

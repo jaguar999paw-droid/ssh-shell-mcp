@@ -415,6 +415,17 @@ The server exposes `/mcp` with Bearer token authentication. Suitable for remote 
 
 ---
 
+## Alternative Interfaces
+
+Beyond stdio/HTTP MCP transport, this repo also includes:
+
+- **`web_server.py`** — a FastAPI wrapper exposing all tools as a REST API (`/api/tools`, `/api/ssh-shell-mcp/call`, `/api/ssh-shell-mcp/exec`), with Swagger docs at `/docs`. Useful for browser-based or non-MCP integrations.
+- **`copilot_bridge.py`** — a lightweight FastMCP bridge exposing a curated subset of tools (`ssh_exec`, `ssh_list_hosts`, `ssh_register_host`, `ssh_process_list`, `ssh_system_info`) for GitHub Copilot Chat / VS Code, routed through `web_server.py` over HTTP.
+
+Both are optional — the primary interface remains the stdio MCP server (`server.py`). See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full startup-performance redesign (lazy connection loading, concurrent-startup fixes, and a recommended fast/slow server split for Claude Desktop configs).
+
+---
+
 ## Project Structure
 
 ```
